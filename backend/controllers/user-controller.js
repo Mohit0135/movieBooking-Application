@@ -14,13 +14,13 @@ exports.getAllUsers = async (req,res,next) => {
     return res.status(200).json({users});
 }
 
-exports.addUsers = async (req,res,next) => {
-    const {name,email,password} = req.body;
-    if(!name &&  !email && !password )
-        {
-            return res.status(422).json({message: "Invaild Inputs"})
-        }
-}
+// exports.addUsers = async (req,res,next) => {
+//     const {name,email,password} = req.body;
+//     if(!name &&  !email && !password )
+//         {
+//             return res.status(422).json({message: "Invaild Inputs"})
+//         }
+// }
 
 exports.signup = async (req,res,next) => {
     const { name, username, password, email } = req.body;
@@ -46,3 +46,56 @@ exports.signup = async (req,res,next) => {
         res.status(500).json({ message: 'Server Error' });
     }
 }
+
+exports.updateUser = async (req,res,next) => {
+    const id  = req.params.id;
+    const { name, email, password } = req.body;
+    if(!name || !email || !password){
+        return res.status(422).json({message:"Invalid Inputs"});
+    }
+    const hassedPassword = bycrypt.hashSync(password);
+    let user;
+
+    try{
+        user = await User.findByIdAndUpdate(id,{
+            name,
+            email, 
+            username,
+            password
+        });
+    }catch(err){
+        return console.log(err);
+    }
+
+    if(!user){
+        return res.status(500).json({message:"Sommething went wrong"})
+    }
+    res.status(200).json({mesage:"Updated Sucessfullly"});
+};
+
+
+exports.deleteUser = async (req,res,next) => {
+    const id  = req.params.id;
+    const { name, email, password } = req.body;
+    if(!name || !email || !password){
+        return res.status(422).json({message:"Invalid Inputs"});
+    }
+    const hassedPassword = bycrypt.hashSync(password);
+    let user;
+
+    try{
+        user = await User.findByIdAndDelete(id,{
+            name,
+            email, 
+            username,
+            password
+        });
+    }catch(err){
+        return console.log(err);
+    }
+
+    if(!user){
+        return res.status(500).json({message:"Sommething went wrong"})
+    }
+    res.status(200).json({mesage:"deleted Sucessfullly"});
+};
