@@ -1,9 +1,9 @@
-const UserModel = require ('../models/User');
+const User = require('../models/User');
 
 exports.getAllUsers = async (req,res,next) => {
     let users;
     try {
-        users = await UserModel.find();
+        users = await User.find();
     }catch(error){
         console.log(error)
         return res.status(500);
@@ -11,13 +11,11 @@ exports.getAllUsers = async (req,res,next) => {
     if(!users){
         return res.status(500).json({mesage:"Unexpected Error Occured"})
     }
-
     return res.status(200).json({users});
 }
 
 exports.addUsers = async (req,res,next) => {
     const {name,email,password} = req.body;
-
     if(
         !name && name.trim() === ""&& 
         !email && email.trim()==="" && 
@@ -28,27 +26,30 @@ exports.addUsers = async (req,res,next) => {
 }
 
 exports.signup = async (req,res,next) => {
-    const {name,email,password} = req.body;
-    console.log()
-    if(
-        !name && name.trim() === ""&& 
-        !email && email.trim()==="" && 
-        !password && password.trim() === "")
-        {
-        return res.status(422).json({message: "Invaild Inputs"})
+    const { name, username, password, contactnumber, email, movie, bookingstatus, slot } = req.body;
+
+    if (!name || !password || !email) {
+        return res.status(400).json({ message: 'Name, password, and email are required' });
     }
 
-    let user;
-    
-    if(!user){
-        return res.status(500).json({message:"Unexpected Error Occured"});
-    }
+    try {
+        const newUser = new User({
+            name,
+            username,
+            password,
+            contactnumber,
+            email,
+            movie,
+            bookingstatus,
+            slot
+        });
 
-    try{
-        user = new UserModel({name,email,password});
-        user = user.save();
-        return res.status(200).json({message:"succesfully sigup use"});
-    }catch(error){
-        return console.log(error);
+        const savedUser = await newUser.save();
+
+        res.status(201).json(savedUser);
+        
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Server Error' });
     }
 }
