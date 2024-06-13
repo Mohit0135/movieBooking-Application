@@ -8,7 +8,6 @@ const userSchema = new Schema({
     },
     username:{
         type:String,
-        required:true,
         unique: true,
     },
     password:{// it didn't come to my mind
@@ -20,7 +19,7 @@ const userSchema = new Schema({
         type:Number,
     },
     email:{
-        type:email,
+        type:String,
         required:true,
         unique: true,
     },
@@ -36,4 +35,4 @@ const userSchema = new Schema({
 })
 
 const User = mongoose.model('User', userSchema);
-export default User;
+module.exports =  User;
