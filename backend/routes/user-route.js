@@ -7,11 +7,6 @@ userRouter.get(
     Users.getAllUsers
 );
 
-// userRouter.post(
-//     '/addUsers',
-//     Users.addUsers
-// );
-
 userRouter.post(
     '/signup',
     Users.signup
