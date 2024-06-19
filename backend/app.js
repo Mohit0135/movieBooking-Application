@@ -5,11 +5,16 @@ dotenv.config();
 
 const app = express();
 
-const userRoutes = require('./routes/user-route'); // Ensure this path is correct
+const userRoutes = require('./routes/user-route');
+const adminRoutes = require('./routes/admin-route'); 
+const movieRoutes = require('./routes/movie-route'); 
+
 const { default: mongoose } = require('mongoose');
 
 app.use(express.json());
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/movie', movieRoutes);
 
 mongoose
 .connect(

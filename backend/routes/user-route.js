@@ -22,4 +22,9 @@ userRouter.delete(
     Users.deleteUser
 );
 
+userRouter.get(
+    '/login',
+    Users.login
+);
+
 module.exports = userRouter;
