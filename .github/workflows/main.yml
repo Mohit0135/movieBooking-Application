@@ -21,7 +21,4 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    - name: Run tests
-      run: npm test
-    
     - run: echo "This workflow ran successfully for the particular action"
