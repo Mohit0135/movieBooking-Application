@@ -3,8 +3,8 @@ const Movie = require ("../controllers/movie-controller");
 
 const movieRouter = express.Router();
 
-movieRouter.post(
-    "/addmovie", 
+movieRouter.get(
+    '/addmovie', 
     Movie.addMovie
 );
 

@@ -4,45 +4,51 @@ const Movie = require("../Models/Movies");
 
 
 exports.addMovie = async (req,res,next) => {
-    const name = req.body?.name;
-    const username = req.body?.username;
-    const password = req.body?.password;
-    const email = req.body?.email;
 
-    console.log(name,username,password,email);
-    if (
-    !name || name.trim() === "" ||
-    !username || username.trim() === "" ||
-    !password || password.trim() === "" ||
-    !email || email.trim() === "") {
-        return res.status(400).json({ message: 'Name, username, password, and email are required' });
+    const extractedToken = req.headers.authorization.split("")[1];
+    if(!extractedToken && extractedToken.trim() === ""){
+        return res.status(404).json({message: "Token Not Found"});
     }
 
-    let existingMovie;
-    try{
-        existingMovie = await Movie.findOne({email});
-    }catch(err){
-        return console.log(err);
-    }
-    if(existingMovie){
-        return res.status(400).json({message: "movie already exists"});
-    } 
+    let adminId;
 
-    let movie;
-    const hashedPassword = bcrypt.hashSync(password);
-    try{
-        movie = new Movie({
-            name,
-            username,
-            email,
-            password:hashedPassword
-        });
-        movie = await Movie.save();
-    }catch(err){
-        return console.log(err);
-    }
-    if(!movie){
-        return res.status(500).json({message:"Unable to store movie"})
-    }
-    return res.status(200).json({movie});
-}
+    JsonWebTokenError.verify(extractedToken,process.env.SECRET_KEY,(err,decrypted) => {
+        if(err){
+            return res.status(401).json({message: `${err.message}`});
+        }else{
+            adminId = decrypted.id;
+            return;
+        }
+    });
+
+    const {title, description, releaseDate, posterUrl, featured} = req.body;
+    if(
+        !title && 
+        title.trim() === "" && 
+        !description && 
+        description.trim() == "" && 
+        !posterUrl && 
+        posterUrl.trim() == "") {
+            return res.status(422).json({message: "Invalid Inputs"});
+        }
+        let movie;
+        try {
+            movie = new Movie({
+                title,
+                description,
+                releaseDate: new Date(`${releaseDate}`),
+                featured,
+                actors,
+                admin: adminId,
+            });
+            console.log(movie);
+            movie = await movie.save();
+        }catch(err){
+             console.log(err);
+             return res.status(500).json({message:"Internal Server Error"});
+        }
+        if(!Movie){
+            return res.status(500).json({message:"Reuest Failed"})
+        }
+        return res.status(201).json({message:"Movie Added"})
+};

@@ -5,6 +5,12 @@ const movieSchema = new mongoose.Schema({
         type: String,
         required:true
     },
+    actors:[
+        {        
+            type:String,
+            required:true
+        }
+    ],
     description:{
         type: String,
         required:true
@@ -17,7 +23,7 @@ const movieSchema = new mongoose.Schema({
         type: String,
         required:true
     },
-    featured:{// i don't know why it is added 
+    featured:{
         type: Boolean,
     },
     bookings:[
