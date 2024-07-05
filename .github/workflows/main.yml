@@ -58,6 +58,7 @@ jobs:
           cd ./movieBooking-Application/backend
 
           npm install --legacy-peer-deps
-          
-          npm run start
+
+          pm2 start app.js --name movieBookingApp
+          pm2 save        
         EOF
