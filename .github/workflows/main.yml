@@ -54,7 +54,6 @@ jobs:
           cd ./movieBooking-Application/backend
 
           npm install --legacy-peer-deps
-          npm run build
-
+          
           npm run start
         EOF
