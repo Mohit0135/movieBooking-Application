@@ -18,8 +18,14 @@ jobs:
       with:
         node-version: 20
 
+    - name: Change directory to backend
+      run: cd backend
+
     - name: Install dependencies
       run: npm install
+      working-directory: backend
+  
+    - run: echo "This workflow ran successfully for the particular action"
     
   deploy:
     needs: build
@@ -43,7 +49,6 @@ jobs:
           apt-get install -y nodejs npm
 
           cd ~
-
 
           git clone https://github.com/Mohit0135/movieBooking-Application.git 
 
