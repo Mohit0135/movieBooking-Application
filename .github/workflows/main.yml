@@ -24,6 +24,8 @@ jobs:
       - name: Install dependencies
         run: npm install
         working-directory: backend
+
+      run: echo"compled with the installation of dependencies"  
     
   deploy:
     needs: build
