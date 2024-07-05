@@ -18,19 +18,16 @@ jobs:
       with:
         node-version: 20
 
-    - name: Change directory to backend
-      run: cd backend
-
     - name: Install dependencies
       run: npm install
       working-directory: backend
-  
-    - run: echo "This workflow ran successfully for the particular action"
     
-  deploy:
-    
-    needs: build
+    - name: Run build script
+      run: npm run build
+      working-directory: backend
 
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -45,20 +42,15 @@ jobs:
         DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
         DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
       run: |
-          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
-          
+        sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
+          sudo apt-get update
+          sudo apt-get install -y nodejs npm
+          npm install -g nodemon pm2 --unsafe-perm
+
           rm -rf ~/movieBooking-Application
+          git clone https://github.com/Mohit0135/movieBooking-Application.git
 
-          git clone https://github.com/Mohit0135/movieBooking-Application.git 
-
-          git fetch origin
-          git checkout main
-          git pull origin main
-        
-          cd ./movieBooking-Application/backend
-
-          npm install --legacy-peer-deps
-
+          cd ~/movieBooking-Application/backend
           npm install --legacy-peer-deps
           npx pm2 start app.js --name movieBookingApp
           npx pm2 save
