@@ -59,6 +59,7 @@ jobs:
 
           npm install --legacy-peer-deps
 
-          pm2 start app.js --name movieBookingApp
-          pm2 save        
+          npm install --legacy-peer-deps
+          npx pm2 start app.js --name movieBookingApp
+          npx pm2 save
         EOF
