@@ -9,6 +9,7 @@ exports.addAdmin = async (req,res,next) => {
     const password = req.body?.password;
     const email = req.body?.email;
 
+    console.log(email,"email");
     console.log(name,username,password,email);
     if (
     !name || name.trim() === "" ||
