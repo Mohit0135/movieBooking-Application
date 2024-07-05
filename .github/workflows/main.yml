@@ -1,8 +1,8 @@
 name: Backend workflow
 
-on: 
+on:
   push:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -10,50 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-    - name: Install dependencies
-      run: npm install
-    
+      - name: Install dependencies
+        run: |
+          cd movieBooking-Application/backend
+          npm install --legacy-peer-deps
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install sshpass
-      run: sudo apt-get install -y sshpass
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
 
-    - name: Deploy to Droplet
-      env:
-        DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
-        DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
-      run: |
-        sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
-
-          apt-get update
-          apt-get install -y nodejs npm
-
-          cd ~
-
-
-          git clone https://github.com/Mohit0135/movieBooking-Application.git 
-
-          git fetch origin
-          git checkout main
-          git pull origin main
-        
-          cd ./movieBooking-Application/backend
-
-          npm install --legacy-peer-deps
-          
-          npm run start
-        EOF
+      - name: Deploy to Droplet
+        env:
+          DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
+          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+        run: |
+          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
+            rm -rf ~/movieBooking-Application
+            git clone https://github.com/Mohit0135/movieBooking-Application.git ~/movieBooking-Application
+            cd ~/movieBooking-Application/backend
+            npm install --legacy-peer-deps
+            npm start
+          EOF
