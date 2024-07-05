@@ -18,14 +18,8 @@ jobs:
       with:
         node-version: 20
 
-      - name: Change directory to backend
-        run: cd backend
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: backend
-
-      run: echo"compled with the installation of dependencies"  
+    - name: Install dependencies
+      run: npm install
     
   deploy:
     needs: build
@@ -59,7 +53,8 @@ jobs:
         
           cd ./movieBooking-Application/backend
 
-          npm install 
-          
+          npm install --legacy-peer-deps
+          npm run build
+
           npm run start
         EOF
