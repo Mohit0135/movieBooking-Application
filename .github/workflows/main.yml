@@ -49,7 +49,7 @@ jobs:
           
           # sudo apt-get update
           # sudo apt-get install -y nodejs npm
-          npm install -g nodemon pm2 --unsafe-perm
+          # npm install -g nodemon pm2 --unsafe-perm
 
           rm -rf ~/movieBooking-Application
 
