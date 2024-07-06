@@ -1,8 +1,8 @@
 name: Backend workflow
 
-on: 
+on:
   push:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -10,44 +10,84 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 20
 
-    - name: Install dependencies
-      run: npm install
-      working-directory: backend
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install sshpass
-      run: sudo apt-get install -y sshpass
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
 
-    - name: Deploy to Droplet
-      env:
-        DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
-        DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
-      run: |
-        sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
-          sudo apt-get update
-          sudo apt-get install -y nodejs npm
-          npm install -g nodemon pm2 --unsafe-perm
+      - name: Deploy to Droplet
+        env:
+          DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
+          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+        run: |
+          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
+            sudo apt-get update
+            sudo apt-get install -y nodejs npm
 
-          rm -rf ~/movieBooking-Application
-          git clone https://github.com/Mohit0135/movieBooking-Application.git
+            rm -rf ~/movieBooking-Application
+            git clone https://github.com/Mohit0135/movieBooking-Application.git ~/movieBooking-Application
 
-          cd ~/movieBooking-Application/backend
-          npm install --legacy-peer-deps
-          npx pm2 start app.js --name movieBookingApp
-          npx pm2 save
-        EOF
+            cd ~/movieBooking-Application/backend
+            npm install --legacy-peer-deps
+
+            # Configure Nginx
+            sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
+            server {
+                listen 80;
+                server_name 64.227.142.79;
+                return 301 https://$host$request_uri;
+            }
+
+            server {
+                listen 443 ssl;
+                server_name 64.227.142.79;
+
+                ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+                ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+
+
+                location / {
+                    proxy_pass http://localhost:5000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_set_header Host $host;
+                    proxy_cache_bypass $http_upgrade;
+                }
+            }
+            NGINX_CONF
+
+            # Enable the Nginx site
+            sudo ln -s /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
+
+            # Test Nginx configuration
+            sudo nginx -t
+
+            # Restart Nginx
+            sudo systemctl restart nginx
+
+            # Restart Node.js application with pm2
+            npx pm2 restart movieBookingApp || npx pm2 start app.js --name movieBookingApp
+
+            # Save pm2 configuration
+            npx pm2 save
+          EOF
