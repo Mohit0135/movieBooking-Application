@@ -1,8 +1,8 @@
 name: Backend workflow
 
-on: 
+on:
   push:
-    branches: 
+    branches:
       - main
 
 jobs:
@@ -10,44 +10,136 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 20
 
-    - name: Install dependencies
-      run: npm install
-      working-directory: backend
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install sshpass
-      run: sudo apt-get install -y sshpass
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
 
-    - name: Deploy to Droplet
-      env:
-        DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
-        DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
-      run: |
-        sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
-          sudo apt-get update
-          sudo apt-get install -y nodejs npm
-          npm install -g nodemon pm2 --unsafe-perm
+      - name: Create New Droplet
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
+        run: |
+          NEW_DROPLET_ID=$(curl -X POST "https://api.digitalocean.com/v2/droplets" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "name":"Blue-droplet",
+                  "region":"nyc3",
+                  "size":"s-1vcpu-1gb",
+                  "image":"ubuntu-20-04-x64",
+                  "ssh_keys":["your-ssh-key-id"],
+                  "backups":false,
+                  "ipv6":false,
+                  "user_data":null,
+                  "monitoring":true
+              }' | jq -r '.droplet.id')
+          echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
 
-          rm -rf ~/movieBooking-Application
-          git clone https://github.com/Mohit0135/movieBooking-Application.git
+      - name: Wait for Droplet to be Active
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+        run: |
+          while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
+            echo "Waiting for droplet to be active..."
+            sleep 10
+          done
 
-          cd ~/movieBooking-Application/backend
-          npm install --legacy-peer-deps
-          npx pm2 start app.js --name movieBookingApp
-          npx pm2 save
-        EOF
+      - name: Get New Droplet IP
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+        run: |
+          NEW_DROPLET_IP=$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
+          echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
+
+      - name: Sync with New Droplet
+        env:
+          DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+        run: |
+          sshpass -p "${DROPLET_PASSWORD}" rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ root@${DROPLET_IP}:~/movieBooking-Application/
+
+      - name: Deploy to New Droplet
+        env:
+          DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+        run: |
+          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
+            cd ~/movieBooking-Application/backend
+            npm install --legacy-peer-deps
+
+            # Configure Nginx
+            sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
+            server {
+                listen 80;
+                server_name _; # Update with your domain or IP
+                location / {
+                    proxy_pass http://localhost:5000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_set_header Host $host;
+                    proxy_cache_bypass $http_upgrade;
+                }
+            }
+            NGINX_CONF
+
+            # Enable the Nginx site
+            sudo ln -sf /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
+
+            # Test Nginx configuration
+            sudo nginx -t
+
+            # Restart Nginx
+            sudo systemctl restart nginx
+
+            # Start Node.js application with pm2
+            npx pm2 startOrRestart ecosystem.config.js --env production
+
+            # Save pm2 configuration
+            npx pm2 save
+          EOF
+
+      - name: Switch DNS or Load Balancer
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+        run: |
+          # Update this section according to how you manage your DNS or load balancer
+          curl -X PUT "https://api.digitalocean.com/v2/domains/yourdomain.com/records/your-record-id" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"data":"'$NEW_DROPLET_IP'"}'
+
+      - name: Cleanup Old Droplet
+        if: success() && env.OLD_DROPLET_ID != ''
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          OLD_DROPLET_ID: ${{ secrets.OLD_DROPLET_ID }}
+        run: |
+          curl -X DELETE "https://api.digitalocean.com/v2/droplets/$OLD_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN"
