@@ -38,20 +38,21 @@ jobs:
         env:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
         run: |
-          NEW_DROPLET_ID=$(curl -X POST "https://api.digitalocean.com/v2/droplets" \
-            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
+          NEW_DROPLET_ID=$(curl -X POST \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
             -d '{
-                  "name":"Blue-droplet",
-                  "region":"blr1-01",
-                  "size":"s-1vcpu-1gb",
-                  "image":"ubuntu-20-04-x64",
-                  "ssh_keys":["Test1"],
-                  "backups":false,
-                  "ipv6":false,
-                  "user_data":null,
-                  "monitoring":true
-              }' | jq -r '.droplet.id')
+            "name":"MovieBackend",
+            "memory": 1024,
+            "vcpus": 1,
+            "disk": 25,
+            "status": "active",
+            "region":"blr1",
+            "size":"s-1vcpu-1gb",
+            "image":"ubuntu-20-04-x64",
+              }' \
+            "https://api.digitalocean.com/v2/droplets" | jq -r '.droplet.id')
+
           echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
 
       - name: Wait for Droplet to be Active
