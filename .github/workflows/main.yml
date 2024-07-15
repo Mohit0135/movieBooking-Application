@@ -43,7 +43,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
                   "name":"Blue-droplet",
-                  "region":"nyc3",
+                  "region":"blr1-01",
                   "size":"s-1vcpu-1gb",
                   "image":"ubuntu-20-04-x64",
                   "ssh_keys":["your-ssh-key-id"],
