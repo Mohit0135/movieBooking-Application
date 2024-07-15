@@ -46,7 +46,7 @@ jobs:
                   "region":"blr1-01",
                   "size":"s-1vcpu-1gb",
                   "image":"ubuntu-20-04-x64",
-                  "ssh_keys":["your-ssh-key-id"],
+                  "ssh_keys":["Test1"],
                   "backups":false,
                   "ipv6":false,
                   "user_data":null,
@@ -59,10 +59,18 @@ jobs:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
+          MAX_WAIT=300  # Set maximum wait time to 5 minutes (300 seconds)
+          WAIT_INTERVAL=10
+          ELAPSED_TIME=0
           while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
+            if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
+              echo "Timeout waiting for droplet to be active"
+              exit 1
+            fi
             echo "Waiting for droplet to be active..."
-            sleep 10
+            sleep $WAIT_INTERVAL
+            ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
           done
 
       - name: Get New Droplet IP
