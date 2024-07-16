@@ -43,7 +43,7 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
             -d '{
-                "name":"BlueGreen",
+                "name":"BlueGreen1",
                 "region":"blr1",
                 "size":"s-1vcpu-1gb",
                 "image":"ubuntu-20-04-x64",
@@ -64,6 +64,18 @@ jobs:
 
           echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
 
+      # - name: Get the Droplet
+      #   env:
+      #     DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+      #   run: |
+      #     NEW_DROPLET_ID=$(curl -X GET \
+      #       "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+      #       -H "Content-Type: application/json" \
+      #       -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" )
+
+      #     echo "Get droplet response: $RESPONSE"
+      #     NEW_DROPLET_ID=$(echo "$RESPONSE" | jq -r '.droplet.id')
+
       - name: Wait for Droplet to be Active
         env:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN}}
@@ -72,7 +84,8 @@ jobs:
           MAX_WAIT=300  # Set maximum wait time to 2 minutes (300 seconds)
           WAIT_INTERVAL=10
           ELAPSED_TIME=0
-          while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+          while [ "$(curl -X GET \
+          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
             if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
               echo "Timeout waiting for droplet to be active"
@@ -88,7 +101,8 @@ jobs:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN}}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
-          NEW_DROPLET_IP=$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+          NEW_DROPLET_IP=$(curl -X GET \
+          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
           echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
 
