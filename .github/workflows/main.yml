@@ -47,7 +47,7 @@ jobs:
                 "region":"blr1",
                 "size":"s-1vcpu-1gb",
                 "image":"ubuntu-20-04-x64",
-                "ssh_keys":[Test1,"d0:27:80:44:ef:50:b7:85:47:03:f0:8b:78:c5:6f:bb"],
+                "ssh_keys":["d0:27:80:44:ef:50:b7:85:47:03:f0:8b:78:c5:6f:bb"],
                 "backups":false,
                 "ipv6":false,
                 "monitoring":true,
