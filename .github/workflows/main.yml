@@ -57,10 +57,10 @@ jobs:
 
       - name: Wait for Droplet to be Active
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
-          MAX_WAIT=300  # Set maximum wait time to 5 minutes (300 seconds)
+          MAX_WAIT=300  # Set maximum wait time to 2 minutes (300 seconds)
           WAIT_INTERVAL=10
           ELAPSED_TIME=0
           while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
@@ -76,7 +76,7 @@ jobs:
 
       - name: Get New Droplet IP
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
           NEW_DROPLET_IP=$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
@@ -135,7 +135,7 @@ jobs:
 
       - name: Switch DNS or Load Balancer
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
           NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
         run: |
           # Update this section according to how you manage your DNS or load balancer
@@ -147,7 +147,7 @@ jobs:
       - name: Cleanup Old Droplet
         if: success() && env.OLD_DROPLET_ID != ''
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
           OLD_DROPLET_ID: ${{ secrets.OLD_DROPLET_ID }}
         run: |
           curl -X DELETE "https://api.digitalocean.com/v2/droplets/$OLD_DROPLET_ID" \
