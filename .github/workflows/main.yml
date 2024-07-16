@@ -92,7 +92,7 @@ jobs:
           DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
           DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
         run: |
-          sshpass -p "${DROPLET_PASSWORD}" rsync -avz --delete \
+          sshpass -p "${SSH_PRIVATE_KEY}" rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ root@${DROPLET_IP}:~/movieBooking-Application/
 
