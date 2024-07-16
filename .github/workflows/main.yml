@@ -95,8 +95,8 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 700 ~/.ssh/id_rsa
           timeout 10 ssh-keyscan -v -H ${{ env.NEW_DROPLET_IP }} >> ~/.ssh/known_hosts
-          cat ~/.ssh/id_rsa
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ env.NEW_DROPLET_IP }} "echo 'SSH setup complete'"
+          # cat ~/.ssh/id_rsa
+          # ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ env.NEW_DROPLET_IP }} "echo 'SSH setup complete'"
       
       - name: Sync with New Droplet
         env:
