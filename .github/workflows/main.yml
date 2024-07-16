@@ -87,31 +87,13 @@ jobs:
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
           echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
 
-      - name: Get New Droplet IP
-        env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN}}
-          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
-        run: |
-          NEW_DROPLET_IP=$(curl -X GET \
-          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
-            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
-          echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
-
-      - name: Add SSH Key to SSH Agent
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ env.NEW_DROPLET_IP }} >> ~/.ssh/known_hosts
-
       - name: Sync with New Droplet
         env:
           DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+          sshpass -p "${DROPLET_PASSWORD}" rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
             ./ root@${DROPLET_IP}:~/movieBooking-Application/
 
       - name: Deploy to New Droplet
