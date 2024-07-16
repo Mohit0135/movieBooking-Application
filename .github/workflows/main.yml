@@ -87,16 +87,18 @@ jobs:
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
           echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
 
-      - name: Add SSH Key to SSH Agent
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add SSH key to known_hosts
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 700 ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           timeout 10 ssh-keyscan -v -H ${{ env.NEW_DROPLET_IP }} >> ~/.ssh/known_hosts
-          # cat ~/.ssh/id_rsa
-          # ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ env.NEW_DROPLET_IP }} "echo 'SSH setup complete'"
+          cat ~/.ssh/id_rsa
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ env.NEW_DROPLET_IP }} "echo 'SSH setup complete'"
+        env:
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+          NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       
       - name: Sync with New Droplet
         env:
