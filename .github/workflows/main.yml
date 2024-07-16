@@ -38,12 +38,12 @@ jobs:
         env:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
-          $(curl -X POST \
+          NEW_DROPLET_IP=$(curl -X POST \
             "https://api.digitalocean.com/v2/droplets" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
             -d '{
-                "name":"BlueGreen1",
+                "name":"New1",
                 "region":"blr1",
                 "size":"s-1vcpu-1gb",
                 "image":"ubuntu-20-04-x64",
@@ -58,7 +58,7 @@ jobs:
         env:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
-          $(curl -X GET \
+          NEW_DROPLET_IP=$(curl -X GET \
             "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" )
