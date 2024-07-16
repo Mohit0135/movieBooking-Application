@@ -36,47 +36,56 @@ jobs:
 
       - name: Create New Droplet
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
           NEW_DROPLET_ID=$(curl -X POST \
+            "https://api.digitalocean.com/v2/droplets" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
             -d '{
-            "name":"MovieBackend",
-            "memory": 1024,
-            "vcpus": 1,
-            "disk": 25,
-            "status": "active",
-            "region":"blr1",
-            "size":"s-1vcpu-1gb",
-            "image":"ubuntu-20-04-x64",
-              }' \
-            "https://api.digitalocean.com/v2/droplets" | jq -r '.droplet.id')
+                "name":"BlueGreen",
+                "region":"blr1",
+                "size":"s-1vcpu-1gb",
+                "image":"ubuntu-20-04-x64",
+                "ssh_keys":["d0:27:80:44:ef:50:b7:85:47:03:f0:8b:78:c5:6f:bb"],
+                "backups":false,
+                "ipv6":false,
+                "monitoring":true,
+                "tags":["env:testing","MovieApp"]
+              }' | jq -r '.droplet.id')
+
+          echo "Create droplet response: $RESPONSE"
+          NEW_DROPLET_ID=$(echo "$RESPONSE" | jq -r '.droplet.id')
+
+          if [ "$NEW_DROPLET_ID" == "null" ]; then
+            echo "Failed to create droplet. Exiting."
+            exit 1
+          fi
 
           echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
 
-      # - name: Wait for Droplet to be Active
-      #   env:
-      #     DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
-      #     NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
-      #   run: |
-      #     MAX_WAIT=300  # Set maximum wait time to 2 minutes (300 seconds)
-      #     WAIT_INTERVAL=10
-      #     ELAPSED_TIME=0
-      #     while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
-      #       -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
-      #       if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
-      #         echo "Timeout waiting for droplet to be active"
-      #         exit 1
-      #       fi
-      #       echo "Waiting for droplet to be active..."
-      #       sleep $WAIT_INTERVAL
-      #       ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
-      #     done
+      - name: Wait for Droplet to be Active
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN}}
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+        run: |
+          MAX_WAIT=300  # Set maximum wait time to 2 minutes (300 seconds)
+          WAIT_INTERVAL=10
+          ELAPSED_TIME=0
+          while [ "$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
+            if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
+              echo "Timeout waiting for droplet to be active"
+              exit 1
+            fi
+            echo "Waiting for droplet to be active..."
+            sleep $WAIT_INTERVAL
+            ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+          done
 
       - name: Get New Droplet IP
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN}}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
           NEW_DROPLET_IP=$(curl -X GET "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
@@ -135,7 +144,7 @@ jobs:
 
       - name: Switch DNS or Load Balancer
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
           NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
         run: |
           # Update this section according to how you manage your DNS or load balancer
@@ -147,7 +156,7 @@ jobs:
       - name: Cleanup Old Droplet
         if: success() && env.OLD_DROPLET_ID != ''
         env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN_MOVIE_APP }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
           OLD_DROPLET_ID: ${{ secrets.OLD_DROPLET_ID }}
         run: |
           curl -X DELETE "https://api.digitalocean.com/v2/droplets/$OLD_DROPLET_ID" \
