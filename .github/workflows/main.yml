@@ -38,7 +38,7 @@ jobs:
         env:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
-          NEW_DROPLET_IP=$(curl -X POST \
+          RESPONSE=$(curl -X POST \
             "https://api.digitalocean.com/v2/droplets" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
@@ -53,18 +53,9 @@ jobs:
                 "monitoring":true,
                 "tags":["env:testing","MovieApp"]
               }')
-
-      - name: Get the Droplet
-        env:
-          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
-        run: |
-          NEW_DROPLET_IP=$(curl -X GET \
-            "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" )
-
-          echo "Get droplet response: $RESPONSE"
+          echo "Create droplet response: $RESPONSE"
           NEW_DROPLET_ID=$(echo "$RESPONSE" | jq -r '.droplet.id')
+          echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
 
       - name: Wait for Droplet to be Active
         env:
