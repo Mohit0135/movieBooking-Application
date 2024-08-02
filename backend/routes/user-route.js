@@ -3,6 +3,11 @@ const Users = require('../controllers/user-controller');
 const userRouter = express.Router();
 
 userRouter.get(
+    '/postCategories',
+    Users.postCategories
+);
+
+userRouter.get(
     '/getAllUsers',
     Users.getAllUsers
 );

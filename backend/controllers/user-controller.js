@@ -1,5 +1,29 @@
 const User = require('../Models/User');
 const bcrypt = require('bcryptjs');
+const vision = require('@google-cloud/vision');
+const client = new vision.ImageAnnotatorClient();
+
+exports.postCategories = async (req, res, next) => {
+  try {
+    const fileName = req.body.image;
+    const [result] = await client.safeSearchDetection(fileName);
+    const detections = result.safeSearchAnnotation;
+    const moderationResult = {
+        adult: detections.adult,
+        medical: detections.medical,
+        spoof: detections.spoof,
+        violence: detections.violence,
+        racy: detections.racy
+    };
+    return res.status(200).json(moderationResult);
+  } catch (error) {
+      console.error('Error during image moderation:', error);
+      return res.status(500).send({
+          status: 'fail',
+          message: 'Error processing image for moderation.'
+      });
+  }
+};
 
 exports.getAllUsers = async (req,res,next) => {
     let users;
