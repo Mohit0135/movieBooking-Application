@@ -17,7 +17,7 @@ exports.postCategories = async (req, res, next) => {
     };
     return res.status(200).json(moderationResult);
   } catch (error) {
-      console.error('Error during image moderation:', error);
+      console.log('Error during image moderation:', error);
       return res.status(500).send({
           status: 'fail',
           message: 'Error processing image for moderation.'
