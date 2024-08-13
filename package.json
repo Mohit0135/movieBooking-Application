@@ -1,0 +1,11 @@
+{
+  "name": "moviebooking-application",
+  "version": "1.0.0",
+  "description": "Doing this project to get a more strong knowledge in Backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

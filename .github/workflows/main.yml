@@ -160,6 +160,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"data":"'$NEW_DROPLET_IP'"}'
 
+      #Haa bhai hata do iss droplet ko
       - name: Cleanup Old Droplet
         if: success() && env.OLD_DROPLET_ID != ''
         env:
