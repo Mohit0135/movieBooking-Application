@@ -11,6 +11,7 @@ exports.addMovie = async (req,res,next) => {
     }
 
     let adminId;
+    console.log(adminId);
 
     JsonWebTokenError.verify(extractedToken,process.env.SECRET_KEY,(err,decrypted) => {
         if(err){
