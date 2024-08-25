@@ -16,6 +16,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/movie', movieRoutes);
 
+//hello moye -> moye moye
+
 mongoose
 .connect(
     `mongodb://admin:${process.env.MONGODB_PASSWORD}@ac-xsvaomc-shard-00-00.twztgos.mongodb.net:27017,ac-xsvaomc-shard-00-01.twztgos.mongodb.net:27017,ac-xsvaomc-shard-00-02.twztgos.mongodb.net:27017/?replicaSet=atlas-eippq4-shard-0&ssl=true&authSource=admin`

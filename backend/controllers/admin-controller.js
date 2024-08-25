@@ -10,6 +10,7 @@ exports.addAdmin = async (req,res,next) => {
 
     console.log(email,"email");
     console.log(name,username,password,email);
+    
     if (
     !name || name.trim() === "" ||
     !username || username.trim() === "" ||
