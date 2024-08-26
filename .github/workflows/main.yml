@@ -45,6 +45,8 @@ jobs:
             git clone https://github.com/Mohit0135/movieBooking-Application.git ~/movieBooking-Application
             cd ~/movieBooking-Application/backend
             npm install --legacy-peer-deps
+
+
             # # Configure Nginx
             # sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
             # server {
@@ -74,6 +76,8 @@ jobs:
             # # Restart Nginx
             # sudo systemctl restart nginx
             # # Restart Node.js application with pm2
+
+            
             npx pm2 restart movieBookingApp || npx pm2 start app.js --name movieBookingApp
             # Save pm2 configuration
             npx pm2 save
