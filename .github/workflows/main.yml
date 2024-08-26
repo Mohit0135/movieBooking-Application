@@ -22,6 +22,7 @@ jobs:
         run: |
           cd backend
           npm install
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -33,52 +34,128 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
 
-      - name: Deploy to Droplet
+      - name: Create New Droplet
         env:
-          DROPLET_IP: ${{ secrets.DIGITALOCEAN_DROPLET_IP }}
-          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
         run: |
-          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
-            sudo apt-get update
-            sudo apt-get install -y nodejs npm nginx
-            rm -rf ~/movieBooking-Application
-            git clone https://github.com/Mohit0135/movieBooking-Application.git ~/movieBooking-Application
+          RESPONSE=$(curl -X POST \
+            "https://api.digitalocean.com/v2/droplets" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
+            -d '{
+                "name":"Newest1",
+                "region":"blr1",
+                "size":"s-1vcpu-1gb",
+                "image":"ubuntu-20-04-x64",
+                "ssh_keys":["d0:27:80:44:ef:50:b7:85:47:03:f0:8b:78:c5:6f:bb"],  # Replace with your SSH key fingerprint
+                "backups":false,
+                "ipv6":false,
+                "monitoring":true,
+                "tags":["env:testing","MovieApp"]
+              }')
+          echo "Create droplet response: $RESPONSE"
+          NEW_DROPLET_ID=$(echo "$RESPONSE" | jq -r '.droplet.id')
+          echo "NEW_DROPLET_ID=$NEW_DROPLET_ID" >> $GITHUB_ENV
+
+      - name: Wait for Droplet to be Active
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+        run: |
+          MAX_WAIT=120  # Set maximum wait time to 2 minutes (120 seconds)
+          WAIT_INTERVAL=10
+          ELAPSED_TIME=0
+          while [ "$(curl -X GET \
+          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
+            if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
+              echo "Timeout waiting for droplet to be active"
+              exit 1
+            fi
+            echo "Waiting for droplet to be active..."
+            sleep $WAIT_INTERVAL
+            ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+          done
+
+      - name: Get New Droplet IP
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
+        run: |
+          NEW_DROPLET_IP=$(curl -X GET \
+          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.networks.v4[0].ip_address')
+          echo "NEW_DROPLET_IP=$NEW_DROPLET_IP" >> $GITHUB_ENV
+
+      - name: Add SSH key to known_hosts and connect
+        env:
+          NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.NEW_DROPLET_IP }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${{ env.NEW_DROPLET_IP }} "echo 'SSH connection successful'"
+
+      - name: Sync with New Droplet
+        env:
+          DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" \
+            ./ root@${DROPLET_IP}:~/movieBooking-Application/
+
+      - name: Deploy to New Droplet
+        env:
+          DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@${DROPLET_IP} << 'EOF'
             cd ~/movieBooking-Application/backend
             npm install --legacy-peer-deps
-
-
-            # # Configure Nginx
-            # sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
-            # server {
-            #     listen 80;
-            #     server_name 64.227.142.79;
-            #     return 301 https://$host$request_uri;
-            # }
-            # server {
-            #     listen 443 ssl;
-            #     server_name 64.227.142.79;
-            #     ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
-            #     ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
-            #     location / {
-            #         proxy_pass http://localhost:5000;
-            #         proxy_http_version 1.1;
-            #         proxy_set_header Upgrade $http_upgrade;
-            #         proxy_set_header Connection 'upgrade';
-            #         proxy_set_header Host $host;
-            #         proxy_cache_bypass $http_upgrade;
-            #     }
-            # }
-            # NGINX_CONF
-            # # Enable the Nginx site
-            # sudo ln -s /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
-            # # Test Nginx configuration
-            # sudo nginx -t
-            # # Restart Nginx
-            # sudo systemctl restart nginx
-            # # Restart Node.js application with pm2
-
-            
-            npx pm2 restart movieBookingApp || npx pm2 start app.js --name movieBookingApp
+            # Configure Nginx
+            sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
+            server {
+                listen 80;
+                server_name _; # Update with your domain or IP
+                location / {
+                    proxy_pass http://localhost:5000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_set_header Host $host;
+                    proxy_cache_bypass $http_upgrade;
+                }
+            }
+            NGINX_CONF
+            # Enable the Nginx site
+            sudo ln -sf /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
+            # Test Nginx configuration
+            sudo nginx -t
+            # Restart Nginx
+            sudo systemctl restart nginx
+            # Start Node.js application with pm2
+            npx pm2 startOrRestart ecosystem.config.js --env production
             # Save pm2 configuration
             npx pm2 save
           EOF
+
+      - name: Switch DNS or Load Balancer
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
+        run: |
+          # Update this section according to how you manage your DNS or load balancer
+          curl -X PUT "https://api.digitalocean.com/v2/domains/yourdomain.com/records/your-record-id" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"data":"'$NEW_DROPLET_IP'"}'
+
+      - name: Cleanup Old Droplet
+        if: success() && env.OLD_DROPLET_ID != ''
+        env:
+          DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+          OLD_DROPLET_ID: ${{ secrets.OLD_DROPLET_ID }}
+        run: |
+          curl -X DELETE "https://api.digitalocean.com/v2/droplets/$OLD_DROPLET_ID" \
+            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN"
