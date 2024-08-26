@@ -23,6 +23,7 @@ exports.addMovie = async (req,res,next) => {
     });
 
     const {title, description, releaseDate, posterUrl, featured} = req.body;
+    console.log(title, description, releaseDate, posterUrl, featured);
     if(
         !title && 
         title.trim() === "" && 

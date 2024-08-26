@@ -45,35 +45,35 @@ jobs:
             git clone https://github.com/Mohit0135/movieBooking-Application.git ~/movieBooking-Application
             cd ~/movieBooking-Application/backend
             npm install --legacy-peer-deps
-            # Configure Nginx
-            sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
-            server {
-                listen 80;
-                server_name 64.227.142.79;
-                return 301 https://$host$request_uri;
-            }
-            server {
-                listen 443 ssl;
-                server_name 64.227.142.79;
-                ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
-                ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
-                location / {
-                    proxy_pass http://localhost:5000;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_set_header Host $host;
-                    proxy_cache_bypass $http_upgrade;
-                }
-            }
-            NGINX_CONF
-            # Enable the Nginx site
-            sudo ln -s /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
-            # Test Nginx configuration
-            sudo nginx -t
-            # Restart Nginx
-            sudo systemctl restart nginx
-            # Restart Node.js application with pm2
+            # # Configure Nginx
+            # sudo tee /etc/nginx/sites-available/movie-booking > /dev/null <<'NGINX_CONF'
+            # server {
+            #     listen 80;
+            #     server_name 64.227.142.79;
+            #     return 301 https://$host$request_uri;
+            # }
+            # server {
+            #     listen 443 ssl;
+            #     server_name 64.227.142.79;
+            #     ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+            #     ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+            #     location / {
+            #         proxy_pass http://localhost:5000;
+            #         proxy_http_version 1.1;
+            #         proxy_set_header Upgrade $http_upgrade;
+            #         proxy_set_header Connection 'upgrade';
+            #         proxy_set_header Host $host;
+            #         proxy_cache_bypass $http_upgrade;
+            #     }
+            # }
+            # NGINX_CONF
+            # # Enable the Nginx site
+            # sudo ln -s /etc/nginx/sites-available/movie-booking /etc/nginx/sites-enabled/
+            # # Test Nginx configuration
+            # sudo nginx -t
+            # # Restart Nginx
+            # sudo systemctl restart nginx
+            # # Restart Node.js application with pm2
             npx pm2 restart movieBookingApp || npx pm2 start app.js --name movieBookingApp
             # Save pm2 configuration
             npx pm2 save
