@@ -1,5 +1,4 @@
 name: Backend workflow
-
 on:
   push:
     branches:
@@ -47,7 +46,6 @@ jobs:
                 "region":"blr1",
                 "size":"s-1vcpu-1gb",
                 "image":"ubuntu-20-04-x64",
-                "ssh_keys":[],  # No SSH keys added
                 "backups":false,
                 "ipv6":false,
                 "monitoring":true,
@@ -62,16 +60,26 @@ jobs:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
           NEW_DROPLET_ID: ${{ env.NEW_DROPLET_ID }}
         run: |
-          MAX_WAIT=120
+          MAX_WAIT=600  # Increase maximum wait time to 10 minutes (600 seconds)
           WAIT_INTERVAL=10
           ELAPSED_TIME=0
-          while [ "$(curl -X GET \
-          "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
-            -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')" != "active" ]; do
+          STATUS=""
+
+          while [ "$STATUS" != "active" ]; do
+            STATUS=$(curl -X GET \
+              "https://api.digitalocean.com/v2/droplets/$NEW_DROPLET_ID" \
+              -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" | jq -r '.droplet.status')
+            
+            if [ "$STATUS" == "active" ]; then
+              echo "Droplet is active"
+              break
+            fi
+
             if [ "$ELAPSED_TIME" -ge "$MAX_WAIT" ]; then
               echo "Timeout waiting for droplet to be active"
               exit 1
             fi
+
             echo "Waiting for droplet to be active..."
             sleep $WAIT_INTERVAL
             ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
@@ -90,9 +98,10 @@ jobs:
       - name: Deploy to New Droplet using Password
         env:
           DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
-          DROPLET_PASSWORD: ${{ secrets.DIGITALOCEAN_DROPLET_PASSWORD }}
+          DROPLET_PASSWORD: ${{ secrets.DROPLET_PASSWORD }}
+          SSH_USER: ${{ secrets.SSH_USER }}
         run: |
-          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DROPLET_IP} << EOF
+          sshpass -p "${DROPLET_PASSWORD}" ssh -o StrictHostKeyChecking=no ${SSH_USER}@${DROPLET_IP} << EOF
             sudo apt-get update
             sudo apt-get install -y nodejs npm nginx
             rm -rf ~/movieBooking-Application
@@ -107,10 +116,10 @@ jobs:
                 location / {
                     proxy_pass http://localhost:5000;
                     proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Upgrade \$http_upgrade;
                     proxy_set_header Connection 'upgrade';
-                    proxy_set_header Host $host;
-                    proxy_cache_bypass $http_upgrade;
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
                 }
             }
             NGINX_CONF
@@ -131,6 +140,7 @@ jobs:
           DIGITALOCEAN_API_TOKEN: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
           NEW_DROPLET_IP: ${{ env.NEW_DROPLET_IP }}
         run: |
+          # Update this section according to how you manage your DNS or load balancer
           curl -X PUT "https://api.digitalocean.com/v2/domains/yourdomain.com/records/your-record-id" \
             -H "Authorization: Bearer $DIGITALOCEAN_API_TOKEN" \
             -H "Content-Type: application/json" \
