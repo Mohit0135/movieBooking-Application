@@ -25,7 +25,7 @@ jobs:
       
       - name: Zip the backend folder
         run: |
-          cd Backend  
+          cd backend  
           zip -r ../backend.zip 
 
   deploy:
