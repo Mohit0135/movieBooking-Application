@@ -23,9 +23,15 @@ jobs:
           cd backend
           npm ci
       
+      - name: List backend files
+        run: |
+          cd backend
+          ls -la  # List all files to ensure the folder isn't empty
+
+      # Step to zip the backend directory
       - name: Zip the backend folder
         run: |
-          cd backend  
+          cd backend
           zip -r ../backend.zip 
 
   deploy:
