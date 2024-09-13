@@ -30,23 +30,14 @@ jobs:
 
       - name: Zip the Backend folder
         run: |
-          cd backend
+          cd Backend
           zip -r ../backend.zip . 
-      
-      - name: List root directory after zipping
-        run: |
-          ls -la  # List all files in the root directory to confirm the backend.zip exists
 
       - name: Upload ZIP to S3
-        uses: NotCoffee418/s3-zip-upload@v1.4
+        run: aws s3 cp backend.zip s3://${{ secrets.S3_BUCKET_NAME }}/backend.zip --region ${{ secrets.AWS_REGION }} --acl public-read
         env:
-          AWS_SECRET_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}       
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  
-          BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}            
-          AWS_REGION: ${{ secrets.AWS_REGION }}                
-          SOURCE_MODE: ZIP                                      
-          SOURCE_PATH: backend.zip 
-          DEST_FILE: backend.zip       
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}       
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   deploy:
     runs-on: ubuntu-latest
