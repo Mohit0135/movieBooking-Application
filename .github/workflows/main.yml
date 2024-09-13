@@ -20,18 +20,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd Backend
+          cd backend
           npm ci
 
       - name: List backend files
         run: |
-          cd Backend
+          cd backend
           ls -la  # List all files to ensure the folder isn't empty
 
       # Step to zip the Backend directory
       - name: Zip the Backend folder
         run: |
-          cd Backend
+          cd backend
           zip -r ../backend.zip . 
 
       - name: Upload ZIP to S3
