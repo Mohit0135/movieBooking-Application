@@ -32,7 +32,7 @@ jobs:
       - name: Zip the backend folder
         run: |
           cd backend
-          zip -r ../backend.zip 
+          zip -r ../backend.zip . 
 
   deploy:
     runs-on: ubuntu-latest
