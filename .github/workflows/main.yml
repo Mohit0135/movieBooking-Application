@@ -40,9 +40,9 @@ jobs:
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  
           BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}            
           AWS_REGION: ${{ secrets.AWS_REGION }}                
-          SOURCE_MODE: ZIP                                      
-          # SOURCE_PATH: ./backend.zip  # Location of the zip file created
-          DEST_FILE: backend.zip       # Destination in S3
+          SOURCE_MODE: FILE                                      
+          SOURCE_PATH: /backend.zip
+          DEST_FILE: backend.zip       
 
   deploy:
     runs-on: ubuntu-latest
