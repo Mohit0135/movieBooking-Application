@@ -26,9 +26,8 @@ jobs:
       - name: List backend files
         run: |
           cd backend
-          ls -la  # List all files to ensure the folder isn't empty
+          ls -la  
 
-      # Step to zip the Backend directory
       - name: Zip the Backend folder
         run: |
           cd backend
@@ -42,7 +41,7 @@ jobs:
           BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}            
           AWS_REGION: ${{ secrets.AWS_REGION }}                
           SOURCE_MODE: ZIP                                      
-          SOURCE_PATH: ../backend.zip  # Location of the zip file created
+          # SOURCE_PATH: ./backend.zip  # Location of the zip file created
           DEST_FILE: backend.zip       # Destination in S3
 
   deploy:
