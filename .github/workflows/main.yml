@@ -20,39 +20,42 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd Backend
           npm ci
-      
+
       - name: List backend files
         run: |
-          cd backend
+          cd Backend
           ls -la  # List all files to ensure the folder isn't empty
 
-      # Step to zip the backend directory
-      - name: Zip the backend folder
+      # Step to zip the Backend directory
+      - name: Zip the Backend folder
         run: |
-          cd backend
+          cd Backend
           zip -r ../backend.zip . 
+
+      - name: Upload ZIP to S3
+        uses: NotCoffee418/s3-zip-upload@v1.4
+        env:
+          AWS_SECRET_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}       
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  
+          BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}            
+          AWS_REGION: ${{ secrets.AWS_REGION }}                
+          SOURCE_MODE: ZIP                                      
+          SOURCE_PATH: ../backend.zip  # Location of the zip file created
+          DEST_FILE: backend.zip       # Destination in S3
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Upload to S3   
-        run: |
-          aws s3 cp backend.zip s3://${{ secrets.S3_BUCKET_NAME }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-
       - name: Deploy to Green Environment (EC2)
         run: |
           aws deploy create-deployment \
             --application-name MovieBackendApp \
             --deployment-group-name GreenDeploymentGroup \
             --deployment-config-name CodeDeployDefault.AllAtOnce \
-            --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=path/in/bucket/package.zip,bundleType=zip
+            --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=backend.zip,bundleType=zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
