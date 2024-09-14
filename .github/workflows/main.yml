@@ -1,49 +1,25 @@
-name: Backend workflow
-
-on:
-  push:
-    branches:
-      - main
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Use Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          npm ci
-
-      - name: List backend files
-        run: |
-          cd backend
-          ls -la  
-
-      - name: Zip the Backend folder
-        run: |
-          cd backend
-          zip -r ../backend.zip . 
-
-      - name: Upload ZIP to S3
-        run: aws s3 cp backend.zip s3://${{ secrets.S3_BUCKET_NAME }}/backend.zip --region ${{ secrets.AWS_REGION }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-
   deploy:
     runs-on: ubuntu-latest
     needs: build
+
     steps:
+      - name: Get Green EC2 Instance ID
+        id: get_green_id
+        run: |
+          GREEN_INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=GreenInstance" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].InstanceId" --output text)
+          echo "GREEN_INSTANCE_ID=$GREEN_INSTANCE_ID" >> $GITHUB_ENV
+
+      - name: Get Blue EC2 Instance ID
+        id: get_blue_id
+        run: |
+          BLUE_INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=BlueInstance" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].InstanceId" --output text)
+          echo "BLUE_INSTANCE_ID=$BLUE_INSTANCE_ID" >> $GITHUB_ENV
+
       - name: Deploy to Green Environment (EC2)
         run: |
           aws deploy create-deployment \
@@ -58,15 +34,15 @@ jobs:
 
       - name: Health Check on Green Environment
         run: |
-          curl -f http://${{ secrets.GREEN_EC2_IP }}/health || exit 1
+          GREEN_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=GreenInstance" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
+          curl -f http://$GREEN_IP/health || exit 1
 
       - name: Terminate Blue Environment
         run: |
-          aws ec2 terminate-instances --instance-ids ${{ secrets.BLUE_EC2_ID }}
+          aws ec2 terminate-instances --instance-ids $BLUE_INSTANCE_ID
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Post-deployment verification
-        run: echo "Deployment and Blue-Green strategy executed successfully."
