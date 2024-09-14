@@ -26,6 +26,9 @@ const userSchema = new Schema({
     movie:{
         type:String,
     },
+    tagline:{
+        type:String,
+    },
     bookingstatus:{
         type:Boolean
     },
